@@ -22,15 +22,18 @@ const formSchema = z.object({
   servantName: z.string().min(1, "مطلوب"),
   todayDate: z.date({ message: "مطلوب" }),
   fullName: z.string().min(1, "الاسم الرباعي مطلوب").refine((val) => val.trim().split(/\s+/).filter(Boolean).length >= 4, "رجاء إدخال الاسم رباعي (4 أسماء على الأقل)"),
-  dob: z.date({ message: "مطلوب" }),
+  dob: z.date({ message: "مطلوب" }).refine((date) => {
+    const year = date.getFullYear();
+    return year >= 1990 && year <= 2010;
+  }, "يجب أن يكون تاريخ الميلاد بين 1990 و 2010"),
   homePhone: z.string().optional().refine((val) => !val || /^\d{7}$/.test(val), "يجب أن يكون 7 أرقام"),
   mobile1: z.string().regex(/^01[0125]\d{8}$/, "رقم موبايل غير صحيح"),
   mobile2: z.string().optional().refine((val) => !val || /^01[0125]\d{8}$/.test(val), "رقم موبايل غير صحيح"),
   maritalStatus: z.string().nullable().refine((val) => val !== null && val.trim() !== "", { message: "مطلوب" }),
-  addressBuilding: z.string().min(1, "مطلوب"),
+  addressBuilding: z.string().min(1, "مطلوب").refine((val) => /^\d+$/.test(val), "أرقام فقط"),
   addressStreet: z.string().min(1, "مطلوب"),
-  addressFloor: z.string().optional(),
-  addressApt: z.string().optional(),
+  addressFloor: z.string().optional().refine((val) => !val || /^\d+$/.test(val), "أرقام فقط"),
+  addressApt: z.string().optional().refine((val) => !val || /^\d+$/.test(val), "أرقام فقط"),
   addressArea: z.string().min(1, "مطلوب"),
   addressLandmark: z.string().optional(),
   siblingsName: z.string().optional(),
@@ -60,12 +63,21 @@ export default function ChurchForm() {
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      todayDate: undefined,
+      todayDate: new Date(),
       dob: undefined,
+      servantName: "",
     },
   });
 
   const [successData, setSuccessData] = useState<{ image: string, formData: FormValues } | null>(null);
+
+  // Persistence: Load on mount
+  useEffect(() => {
+    const savedName = localStorage.getItem("church_servant_name");
+    const savedDate = localStorage.getItem("church_form_date");
+    if (savedName) reset((prev) => ({ ...prev, servantName: savedName }));
+    if (savedDate) reset((prev) => ({ ...prev, todayDate: new Date(savedDate) }));
+  }, [reset]);
 
   // Removed success auto-hide since we use a modal now
 
@@ -91,9 +103,23 @@ export default function ChurchForm() {
       });
       
       if (dataUrl) {
+         // Persist user preference
+         localStorage.setItem("church_servant_name", data.servantName);
+         localStorage.setItem("church_form_date", data.todayDate.toISOString());
+
          setSuccessData({ image: dataUrl, formData: data });
          toast.success("تم تجهيز الصورة بنجاح!");
-         reset(); // Clear form after successful capture
+         
+         // Clear form but keep servant info
+         reset({
+           servantName: data.servantName,
+           todayDate: data.todayDate,
+           addressBuilding: "",
+           addressStreet: "",
+           addressArea: "",
+           fullName: "",
+           dob: undefined,
+         });
       }
     } catch (err: any) {
       console.error("Failed to export image", err);
@@ -235,6 +261,8 @@ END:VCARD`;
                     showYearDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
+                    minDate={new Date(1990, 0, 1)}
+                    maxDate={new Date(2010, 11, 31)}
                     className="flex-1 w-full min-w-0 border-2 border-black p-2 bg-transparent focus:outline-none h-12 appearance-none cursor-pointer placeholder-gray-500"
                   />
                 )}
@@ -279,7 +307,7 @@ END:VCARD`;
             <span className="whitespace-nowrap w-full sm:w-auto">العنوان :</span>
             <InputWrap className="w-1/3 sm:w-32 flex-col sm:flex-row items-start sm:items-center">
               <label className="text-sm shrink-0">رقم العقار :</label>
-              <input type="text" {...register("addressBuilding")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none" />
+              <input type="text" inputMode="numeric" {...register("addressBuilding")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none" />
               <ErrorMsg msg={errors.addressBuilding?.message} />
             </InputWrap>
             <InputWrap className="flex-1 min-w-[150px] flex-col sm:flex-row items-start sm:items-center">
@@ -289,11 +317,13 @@ END:VCARD`;
             </InputWrap>
             <InputWrap className="w-1/4 sm:w-24 flex-col sm:flex-row items-start sm:items-center">
               <label className="text-sm shrink-0">دور :</label>
-              <input type="text" {...register("addressFloor")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none" />
+              <input type="text" inputMode="numeric" {...register("addressFloor")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none" />
+              <ErrorMsg msg={errors.addressFloor?.message} />
             </InputWrap>
             <InputWrap className="w-1/4 sm:w-24 flex-col sm:flex-row items-start sm:items-center">
               <label className="text-sm shrink-0">شقه :</label>
-              <input type="text" {...register("addressApt")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none" />
+              <input type="text" inputMode="numeric" {...register("addressApt")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none" />
+              <ErrorMsg msg={errors.addressApt?.message} />
             </InputWrap>
           </div>
 
