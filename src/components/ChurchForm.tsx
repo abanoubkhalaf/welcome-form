@@ -55,6 +55,7 @@ export default function ChurchForm() {
     handleSubmit,
     watch,
     control,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -75,26 +76,24 @@ export default function ChurchForm() {
     try {
       setIsExporting(true);
       
-      formRef.current.classList.add("force-desktop-export");
-      const originalWidth = formRef.current.style.width;
-      formRef.current.style.width = '850px';
+      // We removed the "force-desktop" logic to allow truly responsive exports.
+      // This will capture the mobile layout on mobile and desktop layout on desktop.
       
       const dataUrl = await toPng(formRef.current, {
         quality: 1,
-        pixelRatio: 2,
+        pixelRatio: 3, // Higher resolution for crisp text on mobile
         backgroundColor: '#ffffff',
         style: {
           margin: '0',
           boxShadow: 'none',
+          padding: '20px', // Add some padding around the capture
         }
       });
       
-      formRef.current.classList.remove("force-desktop-export");
-      formRef.current.style.width = originalWidth;
-
       if (dataUrl) {
          setSuccessData({ image: dataUrl, formData: data });
          toast.success("تم تجهيز الصورة بنجاح!");
+         reset(); // Clear form after successful capture
       }
     } catch (err: any) {
       console.error("Failed to export image", err);
@@ -164,18 +163,6 @@ END:VCARD`;
 
   return (
     <div className="w-full flex justify-center pb-20">
-      <style>{`
-        .force-desktop-export {
-          width: 850px !important;
-          max-width: none !important;
-        }
-        .force-desktop-export .sm\\:flex-row {
-          flex-direction: row !important;
-        }
-        .force-desktop-export .sm\\:items-center {
-          align-items: center !important;
-        }
-      `}</style>
       <div 
         ref={formRef} 
         className="w-full max-w-[850px] bg-white p-4 sm:p-12 relative border-4 border-white transition-all overflow-hidden"
@@ -261,15 +248,15 @@ END:VCARD`;
           </div>
 
           {/* Row 4 */}
-          <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 w-full">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full">
             <div className="flex-1 flex flex-col sm:flex-row sm:gap-4 lg:pr-1 relative">
-              <label className="whitespace-nowrap mb-2 sm:mb-0 sm:self-center">الموبيل :</label>
-              <input type="tel" {...register("mobile1")} className="flex-1 w-full border-2 border-black p-2 tracking-[0.3em] font-mono bg-transparent focus:outline-none text-center h-12" maxLength={11} />
+              <label className="whitespace-nowrap mb-1 sm:mb-0 sm:self-center">الموبيل :</label>
+              <input type="tel" {...register("mobile1")} className="flex-1 w-full border-2 border-black p-2 tracking-[0.1em] sm:tracking-[0.3em] font-mono bg-transparent focus:outline-none text-center h-12" maxLength={11} />
               <ErrorMsg msg={errors.mobile1?.message} />
             </div>
             <div className="flex-[0.8] flex flex-col sm:flex-row sm:gap-4 lg:pr-1 relative">
-               <label className="whitespace-nowrap mb-2 sm:mb-0 sm:self-center">الموبيل :</label>
-              <input type="tel" {...register("mobile2")} className="flex-1 w-full border-2 border-black p-2 tracking-[0.3em] font-mono bg-transparent focus:outline-none text-center h-12" maxLength={11} />
+               <label className="whitespace-nowrap mb-1 sm:mb-0 sm:self-center">الموبيل :</label>
+              <input type="tel" {...register("mobile2")} className="flex-1 w-full border-2 border-black p-2 tracking-[0.1em] sm:tracking-[0.3em] font-mono bg-transparent focus:outline-none text-center h-12" maxLength={11} />
             </div>
           </div>
 
