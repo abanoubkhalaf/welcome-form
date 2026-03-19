@@ -21,7 +21,7 @@ const formSchema = z.object({
   homePhone: z.string().optional(),
   mobile1: z.string().min(11, "يجب أن يكون 11 رقم").max(11, "يجب أن يكون 11 رقم"),
   mobile2: z.string().optional(),
-  maritalStatus: z.string().min(1, "مطلوب"),
+  maritalStatus: z.string({ required_error: "مطلوب", invalid_type_error: "مطلوب" }).min(1, "مطلوب"),
   addressBuilding: z.string().min(1, "مطلوب"),
   addressStreet: z.string().min(1, "مطلوب"),
   addressFloor: z.string().optional(),
@@ -30,13 +30,13 @@ const formSchema = z.object({
   addressLandmark: z.string().optional(),
   siblingsName: z.string().optional(),
   siblingsMobile: z.string().optional(),
-  educationStatus: z.string().optional(),
+  educationStatus: z.string().nullish(),
   university: z.string().optional(),
   college: z.string().optional(),
-  workStatus: z.string().optional(),
+  workStatus: z.string().nullish(),
   jobTitle: z.string().optional(),
   confessionFather: z.string().optional(),
-  servesOtherChurch: z.string().optional(),
+  servesOtherChurch: z.string().nullish(),
   attendedChurch: z.string().optional(),
 });
 
@@ -45,8 +45,6 @@ type FormValues = z.infer<typeof formSchema>;
 export default function ChurchForm() {
   const formRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [success, setSuccess] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -59,12 +57,9 @@ export default function ChurchForm() {
     },
   });
 
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
+  const [modalImage, setModalImage] = useState<string | null>(null);
+
+  // Removed success auto-hide since we use a modal now
 
   const eduStatus = watch("educationStatus");
 
@@ -90,43 +85,48 @@ export default function ChurchForm() {
       formRef.current.classList.remove("force-desktop-export");
       formRef.current.style.width = originalWidth;
 
-      // Convert dataUrl to blob for better mobile support
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const filename = `استمارة-${data.fullName.replace(/\s+/g, '-')}.png`;
-      const file = new File([blob], filename, { type: 'image/png' });
-
-      // Try Web Share API for mobile (iOS/Android)
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'إستمارة بيانات',
-          });
-          setSuccess(true);
-          return;
-        } catch (shareError) {
-          console.log('Share canceled or failed', shareError);
-          // Fallback to normal download if share was canceled or failed unexpectedly
-        }
-      } 
-      
-      // Fallback: Object URL download for Desktop / unsupported mobile
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = blobUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-      
-      setSuccess(true);
-    } catch (err) {
+      // Ensure the image loaded fallback state
+      if (dataUrl) {
+         setModalImage(dataUrl);
+      }
+    } catch (err: any) {
       console.error("Failed to export image", err);
-      alert("حدث خطأ أثناء حفظ الصورة. يرجى المحاولة مرة أخرى.");
+      alert("حدث خطأ أثناء حفظ الصورة: " + (err?.message || "مجهول"));
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const onError = (formErrors: any) => {
+    console.log("Validation failed", formErrors);
+    let errorMessages = [];
+    for (const key in formErrors) {
+       errorMessages.push(`- ${key}: ${formErrors[key].message}`);
+    }
+    alert("برجاء إكمال الحقول المطلوبة:\n" + errorMessages.join("\n"));
+  };
+
+  const handleShare = async () => {
+    if (!modalImage) return;
+    try {
+      const res = await fetch(modalImage);
+      const blob = await res.blob();
+      const file = new File([blob], 'estemara.png', { type: 'image/png' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'إستمارة بيانات',
+        });
+      } else {
+        // Fallback to auto download
+        const link = document.createElement('a');
+        link.download = 'estemara.png';
+        link.href = modalImage;
+        link.click();
+      }
+    } catch(err) {
+      console.log("Share failed or canceled", err);
     }
   };
 
@@ -368,7 +368,6 @@ export default function ChurchForm() {
                   </span>
                 <span>لا</span>
               </label>
-              <div className="relative w-0 h-0"><ErrorMsg msg={errors.servesOtherChurch?.message} /></div>
             </div>
           </div>
 
@@ -388,20 +387,54 @@ export default function ChurchForm() {
         </form>
       </div>
 
-      <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] sm:w-auto">
+      <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[90%] sm:w-auto">
         <button
-          onClick={handleSubmit(onSubmit)}
+          type="button"
+          onClick={handleSubmit(onSubmit, onError)}
           disabled={isExporting}
           className={cn(
             "flex items-center justify-center gap-3 px-6 py-4 sm:px-8 w-full sm:w-auto rounded-full shadow-2xl font-bold text-base sm:text-lg transition-all",
-            success ? "bg-green-600 text-white" : "bg-[#1da1f2] hover:bg-blue-600 text-white",
+            "bg-[#1da1f2] hover:bg-blue-600 text-white",
             isExporting && "opacity-80 cursor-wait"
           )}
         >
-          {isExporting ? <Loader2 className="animate-spin w-6 h-6" /> : success ? <CheckCircle2 className="w-6 h-6" /> : <Download className="w-6 h-6" />}
-          <span>{isExporting ? "جاري التحميل..." : success ? "تم تحميل الصورة" : "تحميل كصورة"}</span>
+          {isExporting ? <Loader2 className="animate-spin w-6 h-6" /> : <Download className="w-6 h-6" />}
+          <span>{isExporting ? "جاري التحضير..." : "حفظ الصورة"}</span>
         </button>
       </div>
+
+      {modalImage && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 sm:p-6" style={{ direction: 'rtl' }}>
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 flex flex-col items-center gap-6 animate-in zoom-in-95">
+             <h3 className="text-xl font-bold text-center text-green-700">تم إنشاء الاستمارة بنجاح!</h3>
+             
+             <div className="relative w-full max-h-[50vh] overflow-y-auto border-2 border-gray-200 rounded-lg p-2 bg-gray-50 flex justify-center">
+                {/* User can long press this image to save on iOS */}
+                <img src={modalImage} alt="الاستمارة" className="w-full h-auto object-contain pointer-events-auto" style={{ WebkitTouchCallout: 'default' }} />
+             </div>
+             
+             <p className="text-sm sm:text-base text-gray-700 text-center font-medium bg-blue-50 p-3 rounded-lg w-full">
+               📱 <strong>لحفظ الصورة على هاتفك:</strong><br/>
+               اضغط مطولاً على الصورة في الأعلى ثم اختر "حفظ الصورة" أو "Save Image".
+             </p>
+
+             <div className="flex w-full gap-4 mt-2">
+                <button 
+                  onClick={handleShare}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" /> أو مشاركة / تنزيل
+                </button>
+                <button 
+                  onClick={() => setModalImage(null)}
+                  className="bg-gray-200 hover:bg-gray-300 text-black font-bold py-3 px-6 rounded-lg"
+                >
+                  إغلاق
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
