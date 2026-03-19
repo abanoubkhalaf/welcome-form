@@ -21,7 +21,7 @@ const formSchema = z.object({
   homePhone: z.string().optional(),
   mobile1: z.string().min(11, "يجب أن يكون 11 رقم").max(11, "يجب أن يكون 11 رقم"),
   mobile2: z.string().optional(),
-  maritalStatus: z.string({ required_error: "مطلوب", invalid_type_error: "مطلوب" }).min(1, "مطلوب"),
+  maritalStatus: z.string().nullable().refine((val) => val !== null && val.trim() !== "", { message: "مطلوب" }),
   addressBuilding: z.string().min(1, "مطلوب"),
   addressStreet: z.string().min(1, "مطلوب"),
   addressFloor: z.string().optional(),
