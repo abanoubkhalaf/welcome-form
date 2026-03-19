@@ -26,7 +26,7 @@ const formSchema = z.object({
     const year = date.getFullYear();
     return year >= 1990 && year <= 2010;
   }, "يجب أن يكون تاريخ الميلاد بين 1990 و 2010"),
-  homePhone: z.string().optional().refine((val) => !val || /^\d{7}$/.test(val), "يجب أن يكون 7 أرقام"),
+  homePhone: z.string().optional().refine((val) => !val || /^\d{7,9}$/.test(val), "يجب أن يكون من 7 إلى 9 أرقام"),
   mobile1: z.string().regex(/^01[0125]\d{8}$/, "رقم موبايل غير صحيح"),
   mobile2: z.string().optional().refine((val) => !val || /^01[0125]\d{8}$/.test(val), "رقم موبايل غير صحيح"),
   maritalStatus: z.string().nullable().refine((val) => val !== null && val.trim() !== "", { message: "مطلوب" }),
@@ -272,6 +272,7 @@ END:VCARD`;
             <InputWrap className="flex-[0.8]">
               <label className="whitespace-nowrap">تليفون المنزل :</label>
               <input type="tel" {...register("homePhone")} className="flex-1 w-full border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none font-mono tracking-widest leading-loose" />
+              <ErrorMsg msg={errors.homePhone?.message} />
             </InputWrap>
           </div>
 
