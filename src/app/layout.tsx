@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Form data entry",
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -21,6 +23,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body className={`${cairo.variable} font-sans antialiased bg-gray-50 text-gray-900`}>
         {children}
+        <Toaster position="bottom-center" richColors />
       </body>
     </html>
   );
