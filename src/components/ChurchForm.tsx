@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toPng } from "html-to-image";
-import { Download, Loader2, CheckCircle2 } from "lucide-react";
+import { Download, Loader2, CheckCircle2, UserPlus } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { toast } from "sonner";
+import DatePicker from "react-datepicker";
+import { ar } from "date-fns/locale";
+import { format } from "date-fns";
+import "react-datepicker/dist/react-datepicker.css";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -15,12 +20,12 @@ function cn(...inputs: ClassValue[]) {
 
 const formSchema = z.object({
   servantName: z.string().min(1, "مطلوب"),
-  todayDate: z.string().min(1, "مطلوب"),
-  fullName: z.string().min(1, "الاسم الرباعي مطلوب"),
-  dob: z.string().min(1, "مطلوب"),
-  homePhone: z.string().optional(),
-  mobile1: z.string().min(11, "يجب أن يكون 11 رقم").max(11, "يجب أن يكون 11 رقم"),
-  mobile2: z.string().optional(),
+  todayDate: z.date({ message: "مطلوب" }),
+  fullName: z.string().min(1, "الاسم الرباعي مطلوب").refine((val) => val.trim().split(/\s+/).filter(Boolean).length >= 4, "رجاء إدخال الاسم رباعي (4 أسماء على الأقل)"),
+  dob: z.date({ message: "مطلوب" }),
+  homePhone: z.string().optional().refine((val) => !val || /^\d{7}$/.test(val), "يجب أن يكون 7 أرقام"),
+  mobile1: z.string().regex(/^01[0125]\d{8}$/, "رقم موبايل غير صحيح"),
+  mobile2: z.string().optional().refine((val) => !val || /^01[0125]\d{8}$/.test(val), "رقم موبايل غير صحيح"),
   maritalStatus: z.string().nullable().refine((val) => val !== null && val.trim() !== "", { message: "مطلوب" }),
   addressBuilding: z.string().min(1, "مطلوب"),
   addressStreet: z.string().min(1, "مطلوب"),
@@ -49,15 +54,17 @@ export default function ChurchForm() {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      todayDate: "",
+      todayDate: undefined,
+      dob: undefined,
     },
   });
 
-  const [modalImage, setModalImage] = useState<string | null>(null);
+  const [successData, setSuccessData] = useState<{ image: string, formData: FormValues } | null>(null);
 
   // Removed success auto-hide since we use a modal now
 
@@ -85,13 +92,13 @@ export default function ChurchForm() {
       formRef.current.classList.remove("force-desktop-export");
       formRef.current.style.width = originalWidth;
 
-      // Ensure the image loaded fallback state
       if (dataUrl) {
-         setModalImage(dataUrl);
+         setSuccessData({ image: dataUrl, formData: data });
+         toast.success("تم تجهيز الصورة بنجاح!");
       }
     } catch (err: any) {
       console.error("Failed to export image", err);
-      alert("حدث خطأ أثناء حفظ الصورة: " + (err?.message || "مجهول"));
+      toast.error("حدث خطأ أثناء حفظ الصورة");
     } finally {
       setIsExporting(false);
     }
@@ -99,17 +106,13 @@ export default function ChurchForm() {
 
   const onError = (formErrors: any) => {
     console.log("Validation failed", formErrors);
-    let errorMessages = [];
-    for (const key in formErrors) {
-       errorMessages.push(`- ${key}: ${formErrors[key].message}`);
-    }
-    alert("برجاء إكمال الحقول المطلوبة:\n" + errorMessages.join("\n"));
+    toast.error("برجاء إكمال الحقول المطلوبة ومراجعة الأخطاء باللون الأحمر");
   };
 
   const handleShare = async () => {
-    if (!modalImage) return;
+    if (!successData?.image) return;
     try {
-      const res = await fetch(modalImage);
+      const res = await fetch(successData.image);
       const blob = await res.blob();
       const file = new File([blob], 'estemara.png', { type: 'image/png' });
       
@@ -119,15 +122,33 @@ export default function ChurchForm() {
           title: 'إستمارة بيانات',
         });
       } else {
-        // Fallback to auto download
         const link = document.createElement('a');
         link.download = 'estemara.png';
-        link.href = modalImage;
+        link.href = successData.image;
         link.click();
       }
     } catch(err) {
       console.log("Share failed or canceled", err);
     }
+  };
+
+  const handleAddContact = () => {
+    if (!successData) return;
+    const { formData } = successData;
+    const dateStr = format(new Date(), 'dd-MM-yyyy');
+    // FN format: ترحيب - Name - Date
+    const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:ترحيب - ${formData.fullName} - ${dateStr}
+TEL;TYPE=CELL:${formData.mobile1}
+END:VCARD`;
+    const blob = new Blob([vcard], { type: "text/vcard" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${formData.fullName}.vcf`;
+    link.click();
+    toast.success("تم إنشاء ملف جهة الاتصال, افتحه لحفظه على هاتفك");
   };
 
   const ErrorMsg = ({ msg }: { msg?: string }) => {
@@ -172,7 +193,20 @@ export default function ChurchForm() {
           <div className="flex flex-col sm:flex-row justify-between gap-6">
             <InputWrap className="flex-1 w-full min-w-0">
               <label className="whitespace-nowrap shrink-0">تاريخ اليوم :</label>
-              <input type="date" {...register("todayDate")} className="flex-1 w-full min-w-0 border-b-2 border-dotted border-black bg-transparent focus:outline-none appearance-none" />
+              <Controller
+                control={control}
+                name="todayDate"
+                render={({ field }) => (
+                  <DatePicker
+                    selected={field.value}
+                    onChange={(date: Date | null) => field.onChange(date)}
+                    locale={ar}
+                    dateFormat="yyyy/MM/dd"
+                    placeholderText="اختر التاريخ"
+                    className="flex-1 w-full min-w-0 border-b-2 border-dotted border-black bg-transparent focus:outline-none appearance-none cursor-pointer placeholder-gray-500"
+                  />
+                )}
+              />
               <ErrorMsg msg={errors.todayDate?.message} />
             </InputWrap>
             <InputWrap className="flex-1">
@@ -201,7 +235,23 @@ export default function ChurchForm() {
           <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 w-full">
             <div className="flex-1 flex flex-col sm:flex-row sm:gap-4 lg:pr-1 relative min-w-0">
               <label className="whitespace-nowrap mb-2 sm:mb-0 sm:self-center shrink-0">تاريخ الميلاد :</label>
-              <input type="date" {...register("dob")} className="flex-1 w-full min-w-0 border-2 border-black p-2 bg-transparent focus:outline-none h-12 appearance-none" />
+              <Controller
+                control={control}
+                name="dob"
+                render={({ field }) => (
+                  <DatePicker
+                    selected={field.value}
+                    onChange={(date: Date | null) => field.onChange(date)}
+                    locale={ar}
+                    dateFormat="yyyy/MM/dd"
+                    placeholderText="اختر تاريخ ميلادك"
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    className="flex-1 w-full min-w-0 border-2 border-black p-2 bg-transparent focus:outline-none h-12 appearance-none cursor-pointer placeholder-gray-500"
+                  />
+                )}
+              />
               <ErrorMsg msg={errors.dob?.message} />
             </div>
             <InputWrap className="flex-[0.8]">
@@ -403,14 +453,15 @@ export default function ChurchForm() {
         </button>
       </div>
 
-      {modalImage && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4 sm:p-6" style={{ direction: 'rtl' }}>
+      {successData && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4 sm:p-6" style={{ direction: 'rtl' }}>
           <div className="bg-white rounded-xl max-w-lg w-full p-6 flex flex-col items-center gap-6 animate-in zoom-in-95">
-             <h3 className="text-xl font-bold text-center text-green-700">تم إنشاء الاستمارة بنجاح!</h3>
+             <h3 className="text-xl font-bold text-center text-green-700 w-full flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-6 h-6" /> تم الاستخراج بنجاح!
+             </h3>
              
-             <div className="relative w-full max-h-[50vh] overflow-y-auto border-2 border-gray-200 rounded-lg p-2 bg-gray-50 flex justify-center">
-                {/* User can long press this image to save on iOS */}
-                <img src={modalImage} alt="الاستمارة" className="w-full h-auto object-contain pointer-events-auto" style={{ WebkitTouchCallout: 'default' }} />
+             <div className="relative w-full max-h-[45vh] overflow-y-auto border-2 border-gray-200 rounded-lg p-2 bg-gray-50 flex justify-center">
+                <img src={successData.image} alt="الاستمارة" className="w-full h-auto object-contain pointer-events-auto" style={{ WebkitTouchCallout: 'default' }} />
              </div>
              
              <p className="text-sm sm:text-base text-gray-700 text-center font-medium bg-blue-50 p-3 rounded-lg w-full">
@@ -418,15 +469,22 @@ export default function ChurchForm() {
                اضغط مطولاً على الصورة في الأعلى ثم اختر "حفظ الصورة" أو "Save Image".
              </p>
 
-             <div className="flex w-full gap-4 mt-2">
+             <button 
+                onClick={handleAddContact}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all"
+              >
+                <UserPlus className="w-5 h-5" /> إضافة المخدوم لجهات الاتصال
+              </button>
+
+             <div className="flex w-full gap-4">
                 <button 
                   onClick={handleShare}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
                 >
-                  <Download className="w-5 h-5" /> أو مشاركة / تنزيل
+                  <Download className="w-5 h-5" /> مشاركة الصورة
                 </button>
                 <button 
-                  onClick={() => setModalImage(null)}
+                  onClick={() => setSuccessData(null)}
                   className="bg-gray-200 hover:bg-gray-300 text-black font-bold py-3 px-6 rounded-lg"
                 >
                   إغلاق
