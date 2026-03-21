@@ -160,6 +160,15 @@ export default function ChurchForm() {
     toast.error("برجاء إكمال الحقول المطلوبة ومراجعة الأخطاء باللون الأحمر");
   };
 
+  const handleDownload = () => {
+    if (!successData?.image) return;
+    const link = document.createElement('a');
+    link.download = `estemara_${successData.formData.fullName}.png`;
+    link.href = successData.image;
+    link.click();
+    toast.info("تم تحميل الصورة!");
+  };
+
   const handleShare = async () => {
     if (!successData?.image) return;
     try {
@@ -528,11 +537,6 @@ export default function ChurchForm() {
                   <img src={successData.image} alt="الاستمارة" className="w-full h-auto object-contain pointer-events-auto shadow-sm" style={{ WebkitTouchCallout: 'default' }} />
                </div>
                
-               <p className="text-sm sm:text-base text-gray-700 text-center font-medium bg-blue-50 p-3 rounded-lg w-full">
-                 📱 <strong>لحفظ الصورة على هاتفك:</strong><br/>
-                 اضغط مطولاً على الصورة في الأعلى ثم اختر "حفظ الصورة" أو "Save Image".
-               </p>
-
                <button 
                   onClick={handleAddContact}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
@@ -540,16 +544,24 @@ export default function ChurchForm() {
                   <UserPlus className="w-5 h-5" /> إضافة المخدوم لجهات الاتصال
                 </button>
 
-               <div className="flex w-full gap-4">
+               <div className="flex flex-col sm:flex-row w-full gap-4">
+                  <button 
+                    onClick={handleDownload}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+                  >
+                    <Download className="w-5 h-5" /> تحميل الصورة
+                  </button>
                   <button 
                     onClick={handleShare}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
                   >
-                    <Share2 className="w-5 h-5" /> مشاركة الصورة
+                    <Share2 className="w-5 h-5" /> مشاركة
                   </button>
+               </div>
+               <div className="flex w-full gap-4">
                   <button 
                     onClick={() => setSuccessData(null)}
-                    className="bg-gray-200 hover:bg-gray-300 text-black font-bold py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-black font-bold py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
                   >
                     إغلاق
                   </button>
