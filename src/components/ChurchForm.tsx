@@ -212,7 +212,8 @@ export default function ChurchForm() {
         className="w-full max-w-[850px] bg-white p-4 sm:p-12 relative border-4 border-white overflow-visible mb-20"
         style={{ direction: 'rtl' }}
       >
-        <div className="text-center mb-6">
+        <div className="flex flex-col items-center mb-6">
+          <img src="/logo.webp" alt="Logo" className="w-24 h-24 sm:w-32 sm:h-32 object-contain mb-4" />
           <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-black">إستمارة بيانات</h1>
         </div>
 
