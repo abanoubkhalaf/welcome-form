@@ -69,7 +69,7 @@ const ScrollSection = ({ children, x = 0, y = 20, delay = 0 }: { children: React
     initial={{ opacity: 0, x, y }}
     whileInView={{ opacity: 1, x: 0, y: 0 }}
     viewport={{ once: true, margin: "-150px" }}
-    transition={{ duration: 1.2, delay, ease: [0.22, 1, 0.36, 1] }}
+    transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
   >
     {children}
   </motion.div>
@@ -117,7 +117,17 @@ export default function ChurchForm() {
          localStorage.setItem("church_servant_name", data.servantName);
          localStorage.setItem("church_form_date", data.todayDate.toISOString());
          setSuccessData({ image: dataUrl, formData: data });
-         toast.success("تم تجهيز الصورة بنجاح!");
+         
+         // Trigger automatic download
+         const names = data.fullName.trim().split(/\s+/).slice(0, 2).join("_");
+         const downloadName = `estmaret_${names}_${format(new Date(), "dd-MM-yyyy")}.png`;
+         
+         const link = document.createElement('a');
+         link.download = downloadName;
+         link.href = dataUrl;
+         link.click();
+         
+         toast.success("تم تجهيز وتنزيل الصورة بنجاح!");
          
          reset({
             servantName: data.servantName,
@@ -160,10 +170,14 @@ export default function ChurchForm() {
     toast.error("برجاء إكمال الحقول المطلوبة ومراجعة الأخطاء باللون الأحمر");
   };
 
+
   const handleDownload = () => {
     if (!successData?.image) return;
+    const names = successData.formData.fullName.trim().split(/\s+/).slice(0, 2).join("_");
+    const downloadName = `estmaret_${names}_${format(new Date(), "dd-MM-yyyy")}.png`;
+    
     const link = document.createElement('a');
-    link.download = `estemara_${successData.formData.fullName}.png`;
+    link.download = downloadName;
     link.href = successData.image;
     link.click();
     toast.info("تم تحميل الصورة!");
@@ -177,11 +191,16 @@ export default function ChurchForm() {
       const file = new File([blob], 'estemara.png', { type: 'image/png' });
       
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'إستمارة بيانات' });
+        const names = successData.formData.fullName.trim().split(/\s+/).slice(0, 2).join("_");
+        const shareName = `estmaret_${names}_${format(new Date(), "dd-MM-yyyy")}.png`;
+        await navigator.share({ files: [file], title: shareName });
         toast.success("تم بدء المشاركة بنجاح");
       } else {
+        const names = successData.formData.fullName.trim().split(/\s+/).slice(0, 2).join("_");
+        const downloadName = `estmaret_${names}_${format(new Date(), "dd-MM-yyyy")}.png`;
+        
         const link = document.createElement('a');
-        link.download = 'estemara.png';
+        link.download = downloadName;
         link.href = successData.image;
         link.click();
         toast.info("تم تحميل الصورة!");
@@ -545,19 +564,24 @@ export default function ChurchForm() {
                   <UserPlus className="w-5 h-5" /> إضافة المخدوم لجهات الاتصال
                 </button>
 
-               <div className="flex flex-col sm:flex-row w-full gap-4">
-                  <button 
-                    onClick={handleDownload}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
-                  >
-                    <Download className="w-5 h-5" /> تحميل الصورة
-                  </button>
-                  <button 
-                    onClick={handleShare}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
-                  >
-                    <Share2 className="w-5 h-5" /> مشاركة
-                  </button>
+               <div className="flex flex-col w-full gap-4">
+                  <div className="text-center text-gray-500 text-sm font-medium pt-2">
+                    " في حالة لم يتم تحميل الاستمارة تلقائياً، يمكنك إعادة المحاولة من هنا "
+                  </div>
+                  <div className="flex flex-col sm:flex-row w-full gap-4">
+                    <button 
+                      onClick={handleDownload}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+                    >
+                      <Download className="w-5 h-5" /> تحميل الصورة يدويًا
+                    </button>
+                    <button 
+                      onClick={handleShare}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+                    >
+                      <Share2 className="w-5 h-5" /> مشاركة الاستمارة
+                    </button>
+                  </div>
                </div>
                <div className="flex w-full gap-4">
                   <button 
