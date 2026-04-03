@@ -35,7 +35,7 @@ const InputWrap = ({ children, className }: { children: React.ReactNode, classNa
 );
 
 const arabicDigitsRegex = /^[0-9٠-٩]+$/;
-const mobileRegex = /^(01|٠١)[0125٠١٢٥][0-9٠-٩]{8}$/;
+const mobileRegex = /^[0٠][1١][0125٠١٢٥][0-9٠-٩]{8}$/;
 const homePhoneRegex = /^[0-9٠-٩]{7,9}$/;
 
 const formSchema = z.object({
