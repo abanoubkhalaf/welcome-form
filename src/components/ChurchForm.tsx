@@ -19,6 +19,10 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const normalizeArabicNumerals = (str: string): string => {
+  return str.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
+};
+
 const ErrorMsg = ({ msg }: { msg?: string }) => {
   if (!msg) return null;
   return <span className="text-red-500 text-xs absolute -bottom-4 right-0 font-normal">{msg}</span>;
@@ -34,10 +38,7 @@ const formSchema = z.object({
   servantName: z.string().min(1, "مطلوب"),
   todayDate: z.date({ message: "مطلوب" }),
   fullName: z.string().min(1, "الاسم الرباعي مطلوب").refine((val) => val.trim().split(/\s+/).filter(Boolean).length >= 4, "رجاء إدخال الاسم رباعي (4 أسماء على الأقل)"),
-  dob: z.date({ message: "مطلوب" }).refine((date) => {
-    const year = date.getFullYear();
-    return year >= 1990 && year <= 2010;
-  }, "يجب أن يكون تاريخ الميلاد بين 1990 و 2010"),
+  dob: z.date({ message: "مطلوب" }),
   homePhone: z.string().optional().refine((val) => !val || /^\d{7,9}$/.test(val), "يجب أن يكون من 7 إلى 9 أرقام"),
   mobile1: z.string().regex(/^01[0125]\d{8}$/, "رقم موبايل غير صحيح"),
   mobile2: z.string().optional().refine((val) => !val || /^01[0125]\d{8}$/.test(val), "رقم موبايل غير صحيح"),
@@ -48,8 +49,6 @@ const formSchema = z.object({
   addressApt: z.string().optional().refine((val) => !val || /^\d+$/.test(val), "أرقام فقط"),
   addressArea: z.string().min(1, "مطلوب"),
   addressLandmark: z.string().optional(),
-  siblingsName: z.string().optional(),
-  siblingsMobile: z.string().optional(),
   educationStatus: z.string().nullish(),
   studentYear: z.string().optional().refine((val) => !val || /^\d+$/.test(val), "أرقام فقط"),
   university: z.string().optional(),
@@ -97,9 +96,9 @@ export default function ChurchForm() {
 
   useEffect(() => {
     const savedName = localStorage.getItem("church_servant_name");
-    const savedDate = localStorage.getItem("church_form_date");
-    if (savedName) reset((prev) => ({ ...prev, servantName: savedName }));
-    if (savedDate) reset((prev) => ({ ...prev, todayDate: new Date(savedDate) }));
+    if (savedName) {
+      reset((prev) => ({ ...prev, servantName: savedName }));
+    }
   }, [reset]);
 
   const onSubmit = async (data: FormValues) => {
@@ -115,7 +114,6 @@ export default function ChurchForm() {
       
       if (dataUrl) {
          localStorage.setItem("church_servant_name", data.servantName);
-         localStorage.setItem("church_form_date", data.todayDate.toISOString());
          setSuccessData({ image: dataUrl, formData: data });
          
          // Trigger automatic download
@@ -131,7 +129,7 @@ export default function ChurchForm() {
          
          reset({
             servantName: data.servantName,
-            todayDate: data.todayDate,
+            todayDate: new Date(),
             fullName: "",
             dob: undefined,
             mobile1: "",
@@ -150,8 +148,6 @@ export default function ChurchForm() {
             graduationYear: "",
             workStatus: null,
             jobTitle: "",
-            siblingsName: "",
-            siblingsMobile: "",
             confessionFather: "",
             servesOtherChurch: null,
             attendedChurch: "",
@@ -295,9 +291,7 @@ export default function ChurchForm() {
                       dateFormat="yyyy/MM/dd"
                       showYearDropdown
                       scrollableYearDropdown
-                      yearDropdownItemNumber={100}
-                      minDate={new Date(1990, 0, 1)}
-                      maxDate={new Date(2010, 11, 31)}
+                      yearDropdownItemNumber={120}
                       portalId="root-portal"
                       className="flex-1 w-full min-w-0 border-2 border-black p-2 bg-transparent focus:outline-none focus:border-blue-500 transition-all h-12 text-center"
                     />
@@ -307,7 +301,7 @@ export default function ChurchForm() {
               </div>
               <InputWrap className="flex-[0.8]">
                 <label className="whitespace-nowrap">تليفون المنزل :</label>
-                <input type="tel" {...register("homePhone")} className="flex-1 w-full border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all font-mono tracking-widest leading-loose" />
+                <input type="tel" {...register("homePhone", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="flex-1 w-full border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all font-mono tracking-widest leading-loose" />
                 <ErrorMsg msg={errors.homePhone?.message} />
               </InputWrap>
             </div>
@@ -318,12 +312,12 @@ export default function ChurchForm() {
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 w-full">
               <div className="flex-1 flex flex-col sm:flex-row sm:gap-4 lg:pr-1 relative">
                 <label className="whitespace-nowrap mb-1 sm:mb-0 sm:self-center">الموبيل :</label>
-                <input type="tel" {...register("mobile1")} className="flex-1 w-full border-2 border-black p-2 tracking-[0.1em] sm:tracking-[0.3em] font-mono bg-transparent focus:outline-none focus:border-blue-500 transition-all text-center h-12" maxLength={11} />
+                <input type="tel" {...register("mobile1", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="flex-1 w-full border-2 border-black p-2 tracking-[0.1em] sm:tracking-[0.3em] font-mono bg-transparent focus:outline-none focus:border-blue-500 transition-all text-center h-12" maxLength={11} />
                 <ErrorMsg msg={errors.mobile1?.message} />
               </div>
               <div className="flex-[0.8] flex flex-col sm:flex-row sm:gap-4 lg:pr-1 relative">
                  <label className="whitespace-nowrap mb-1 sm:mb-0 sm:self-center">الموبيل :</label>
-                <input type="tel" {...register("mobile2")} className="flex-1 w-full border-2 border-black p-2 tracking-[0.1em] sm:tracking-[0.3em] font-mono bg-transparent focus:outline-none focus:border-blue-500 transition-all text-center h-12" maxLength={11} />
+                <input type="tel" {...register("mobile2", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="flex-1 w-full border-2 border-black p-2 tracking-[0.1em] sm:tracking-[0.3em] font-mono bg-transparent focus:outline-none focus:border-blue-500 transition-all text-center h-12" maxLength={11} />
                 <ErrorMsg msg={errors.mobile2?.message} />
               </div>
             </div>
@@ -349,7 +343,7 @@ export default function ChurchForm() {
               <span className="whitespace-nowrap w-full sm:w-auto">العنوان :</span>
               <InputWrap className="w-1/3 sm:w-32 flex-col sm:flex-row items-start sm:items-center">
                 <label className="text-sm shrink-0">رقم العقار :</label>
-                <input type="text" inputMode="numeric" {...register("addressBuilding")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all" />
+                <input type="text" inputMode="numeric" {...register("addressBuilding", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all" />
                 <ErrorMsg msg={errors.addressBuilding?.message} />
               </InputWrap>
               <InputWrap className="flex-1 min-w-[150px] flex-col sm:flex-row items-start sm:items-center">
@@ -359,12 +353,12 @@ export default function ChurchForm() {
               </InputWrap>
               <InputWrap className="w-1/4 sm:w-24 flex-col sm:flex-row items-start sm:items-center">
                 <label className="text-sm shrink-0">دور :</label>
-                <input type="text" inputMode="numeric" {...register("addressFloor")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all" />
+                <input type="text" inputMode="numeric" {...register("addressFloor", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all" />
                 <ErrorMsg msg={errors.addressFloor?.message} />
               </InputWrap>
               <InputWrap className="w-1/4 sm:w-24 flex-col sm:flex-row items-start sm:items-center">
                 <label className="text-sm shrink-0">شقه :</label>
-                <input type="text" inputMode="numeric" {...register("addressApt")} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all" />
+                <input type="text" inputMode="numeric" {...register("addressApt", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="w-full sm:flex-1 border-b-2 border-dotted border-black bg-transparent text-center focus:outline-none focus:border-blue-500 transition-all" />
                 <ErrorMsg msg={errors.addressApt?.message} />
               </InputWrap>
             </div>
@@ -388,20 +382,6 @@ export default function ChurchForm() {
             " ليس من الضروري استكمال البيانات التاليه اذا كان سن المخدوم فوق 32 سنه "
           </div>
 
-          {/* Row 8 - Siblings */}
-          <ScrollSection x={30}>
-            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mt-8">
-              <div className="flex-[1.5] w-full flex flex-col sm:flex-row sm:gap-4 lg:pr-1">
-                <label className="whitespace-nowrap mb-2 sm:mb-0 sm:self-center">إخوة و أخوات :</label>
-                <input type="text" {...register("siblingsName")} className="flex-1 w-full border-2 border-black p-2 bg-transparent h-12 focus:outline-none focus:border-blue-500 transition-all" />
-              </div>
-              <div className="flex-1 w-full flex flex-col sm:flex-row sm:gap-4 lg:pr-1">
-                <label className="whitespace-nowrap mb-2 sm:mb-0 sm:self-center">الموبيل :</label>
-                <input type="tel" {...register("siblingsMobile")} className="flex-1 w-full border-b-2 border-dotted border-black font-mono tracking-widest text-center focus:outline-none focus:border-blue-500 transition-all leading-loose" maxLength={11} />
-              </div>
-            </div>
-          </ScrollSection>
-
           {/* Row 9 - Education & Work */}
           <ScrollSection y={30}>
             <div className="flex flex-col gap-6 mt-6">
@@ -424,7 +404,7 @@ export default function ChurchForm() {
                   </InputWrap>
                   <InputWrap className="flex-[0.6]">
                     <span className="whitespace-nowrap">فرقة/سنة :</span>
-                    <input type="text" inputMode="numeric" {...register("studentYear")} className="flex-1 w-full border-b-2 border-dotted border-black bg-transparent focus:outline-none focus:border-blue-500 transition-all text-center" />
+                    <input type="text" inputMode="numeric" {...register("studentYear", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="flex-1 w-full border-b-2 border-dotted border-black bg-transparent focus:outline-none focus:border-blue-500 transition-all text-center" />
                     <ErrorMsg msg={errors.studentYear?.message} />
                   </InputWrap>
                 </div>
@@ -464,7 +444,7 @@ export default function ChurchForm() {
                     
                     <InputWrap className="flex-[0.8] w-full">
                       <span className="whitespace-nowrap shrink-0">سنة التخرج :</span>
-                      <input type="text" inputMode="numeric" {...register("graduationYear")} className="flex-1 border-b-2 border-dotted border-black bg-transparent focus:outline-none focus:border-blue-500 transition-all w-full leading-loose text-center" />
+                      <input type="text" inputMode="numeric" {...register("graduationYear", { onChange: (e) => { e.target.value = normalizeArabicNumerals(e.target.value); } })} className="flex-1 border-b-2 border-dotted border-black bg-transparent focus:outline-none focus:border-blue-500 transition-all w-full leading-loose text-center" />
                       <ErrorMsg msg={errors.graduationYear?.message} />
                     </InputWrap>
                  </div>
