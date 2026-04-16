@@ -12,8 +12,15 @@ export async function POST(req: NextRequest) {
 
     const appsScriptUrl = process.env.NEXT_PUBLIC_GOOGLE_APPS_SCRIPT_URL;
 
+    if (!appsScriptUrl) {
+      console.error("NEXT_PUBLIC_GOOGLE_APPS_SCRIPT_URL is not defined");
+      return NextResponse.json({ 
+        error: "Server configuration error: Google Apps Script URL is missing. Please check your environment variables." 
+      }, { status: 500 });
+    }
+
     // Forward the text data directly to Apps Script
-    const response = await fetch(appsScriptUrl!, {
+    const response = await fetch(appsScriptUrl, {
       method: "POST",
       headers: {
         "Content-Type": "text/plain;charset=utf-8",
@@ -32,11 +39,12 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) {
       return NextResponse.json({ 
-        error: "Google Apps Script error",
+        error: "Google Apps Script error: Invalid response from script.",
         details: text.substring(0, 200)
       }, { status: 500 });
     }
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Upload error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

@@ -486,7 +486,7 @@ export default function ChurchForm() {
             <ScrollSection y={30}>
               <div className="flex flex-col gap-6 mt-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full">
-                  <label className="flex items-center gap-3 cursor-pointer w_auto sm:w-24 shrink-0">
+                  <label className="flex items-center gap-3 cursor-pointer w-auto sm:w-24 shrink-0">
                     <span className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-black flex items-center justify-center bg-white relative">
                       <input
                         type="radio"
