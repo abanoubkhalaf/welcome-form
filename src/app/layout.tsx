@@ -8,9 +8,14 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "إستمارة بيانات",
-  description: "Form data entry",
+  title: "إستمارة بيانات الشباب - كنيسة العذراء مريم",
+  description: "إستمارة بيانات إجتماع الشباب وكنيستنا",
+  icons: {
+    icon: "/logo.webp",
+  },
 };
+
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -21,6 +26,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <body className={`${cairo.variable} font-sans antialiased bg-gray-50 text-gray-900`}>
         {children}
+        <Toaster position="bottom-center" richColors />
       </body>
     </html>
   );
