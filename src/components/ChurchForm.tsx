@@ -197,6 +197,7 @@ export default function ChurchForm() {
         dob: undefined,
         mobile1: "",
         mobile2: "",
+        maritalStatus: null,
         homePhone: "",
         addressBuilding: "",
         addressStreet: "",
