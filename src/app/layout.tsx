@@ -8,8 +8,11 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "إستمارة بيانات",
-  description: "Form data entry",
+  title: "إستمارة بيانات الشباب - كنيسة العذراء مريم",
+  description: "إستمارة بيانات إجتماع الشباب وكنيستنا",
+  icons: {
+    icon: "/logo.webp",
+  },
 };
 
 import { Toaster } from "sonner";
