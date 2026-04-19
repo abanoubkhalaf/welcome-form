@@ -8,12 +8,13 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "إستمارة بيانات الشباب - كنيسة العذراء مريم",
+  title: "إستمارة بيانات الشباب - كنيسة رئيس الملائكة الجليل ميخائيل",
   description: "إستمارة بيانات إجتماع الشباب وكنيستنا",
   icons: {
     icon: "/logo.webp",
   },
 };
+
 
 import { Toaster } from "sonner";
 
