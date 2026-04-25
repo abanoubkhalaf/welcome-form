@@ -8,7 +8,7 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "إستمارة بيانات الشباب - كنيسة العذراء مريم",
+  title: "إستمارة بيانات الشباب - كنيسة رئيس الملائكة الجليل ميخائيل",
   description: "إستمارة بيانات إجتماع الشباب وكنيستنا",
   icons: {
     icon: "/logo.webp",
@@ -24,7 +24,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${cairo.variable} font-sans antialiased bg-gray-50 text-gray-900`}>
+      <body
+        className={`${cairo.variable} font-sans antialiased bg-gray-50 text-gray-900`}
+      >
         {children}
         <Toaster position="bottom-center" richColors />
       </body>

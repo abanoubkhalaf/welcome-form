@@ -48,6 +48,9 @@ const arabicDigitsRegex = /^[0-9٠-٩]+$/;
 const mobileRegex = /^[0٠][1١][0125٠١٢٥][0-9٠-٩]{8}$/;
 const homePhoneRegex = /^[0-9٠-٩]{7,9}$/;
 
+const toEnglishDigits = (str: string) => 
+  str.replace(/[٠-٩]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48));
+
 const formSchema = z.object({
   servantName: z.string().min(1, "مطلوب"),
   todayDate: z.date({ message: "مطلوب" }),
@@ -58,7 +61,21 @@ const formSchema = z.object({
       (val) => val.trim().split(/\s+/).filter(Boolean).length >= 4,
       "رجاء إدخال الاسم رباعي (4 أسماء على الأقل)",
     ),
-  dob: z.date({ message: "مطلوب" }),
+  dobDay: z.string().min(1, "مطلوب").refine((val) => {
+    if (!arabicDigitsRegex.test(val)) return false;
+    const num = parseInt(toEnglishDigits(val), 10);
+    return num >= 1 && num <= 31;
+  }, "يوم غير صحيح"),
+  dobMonth: z.string().min(1, "مطلوب").refine((val) => {
+    if (!arabicDigitsRegex.test(val)) return false;
+    const num = parseInt(toEnglishDigits(val), 10);
+    return num >= 1 && num <= 12;
+  }, "شهر غير صحيح"),
+  dobYear: z.string().min(1, "مطلوب").refine((val) => {
+    if (!arabicDigitsRegex.test(val)) return false;
+    const num = parseInt(toEnglishDigits(val), 10);
+    return num >= 1900 && num <= new Date().getFullYear();
+  }, "سنة غير صحيحة"),
   homePhone: z
     .string()
     .optional()
@@ -143,7 +160,9 @@ export default function ChurchForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       todayDate: new Date(),
-      dob: undefined,
+      dobDay: "",
+      dobMonth: "",
+      dobYear: "",
       servantName: "",
     },
   });
@@ -166,6 +185,8 @@ export default function ChurchForm() {
 
       toast.info("جاري إنشاء PDF والرفع على Google Drive...");
 
+      const formattedDob = `${toEnglishDigits(data.dobYear)}/${toEnglishDigits(data.dobMonth).padStart(2, '0')}/${toEnglishDigits(data.dobDay).padStart(2, '0')}`;
+
       const response = await fetch("/api/upload-to-drive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -173,7 +194,7 @@ export default function ChurchForm() {
           formData: {
             ...data,
             todayDate: format(data.todayDate, "yyyy-MM-dd"),
-            dob: format(data.dob, "yyyy/MM/dd"),
+            dob: formattedDob,
           },
           fileName,
           folderDate: format(data.todayDate, "yyyy-MM-dd"),
@@ -194,7 +215,9 @@ export default function ChurchForm() {
         servantName: data.servantName,
         todayDate: data.todayDate,
         fullName: "",
-        dob: undefined,
+        dobDay: "",
+        dobMonth: "",
+        dobYear: "",
         mobile1: "",
         mobile2: "",
         maritalStatus: null,
@@ -319,24 +342,38 @@ export default function ChurchForm() {
                   <label className="whitespace-nowrap mb-2 sm:mb-0 sm:self-center shrink-0">
                     تاريخ الميلاد :
                   </label>
-                  <Controller
-                    control={control}
-                    name="dob"
-                    render={({ field }) => (
-                      <DatePicker
-                        selected={field.value}
-                        onChange={(date: Date | null) => field.onChange(date)}
-                        locale={ar}
-                        dateFormat="yyyy/MM/dd"
-                        showYearDropdown
-                        scrollableYearDropdown
-                        yearDropdownItemNumber={120}
-                        portalId="root-portal"
-                        className="flex-1 w-full min-w-0 border-2 border-black p-2 bg-transparent focus:outline-none focus:border-blue-500 transition-all h-12 text-center"
+                  <div className="flex gap-2 flex-1 relative">
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        placeholder="يوم"
+                        maxLength={2}
+                        {...register("dobDay")}
+                        className="w-full border-2 border-black p-2 bg-transparent focus:outline-none focus:border-blue-500 transition-all h-12 text-center"
                       />
-                    )}
-                  />
-                  <ErrorMsg msg={errors.dob?.message} />
+                      <ErrorMsg msg={errors.dobDay?.message} />
+                    </div>
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        placeholder="شهر"
+                        maxLength={2}
+                        {...register("dobMonth")}
+                        className="w-full border-2 border-black p-2 bg-transparent focus:outline-none focus:border-blue-500 transition-all h-12 text-center"
+                      />
+                      <ErrorMsg msg={errors.dobMonth?.message} />
+                    </div>
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        placeholder="سنة"
+                        maxLength={4}
+                        {...register("dobYear")}
+                        className="w-full border-2 border-black p-2 bg-transparent focus:outline-none focus:border-blue-500 transition-all h-12 text-center"
+                      />
+                      <ErrorMsg msg={errors.dobYear?.message} />
+                    </div>
+                  </div>
                 </div>
                 <InputWrap className="flex-[0.8]">
                   <label className="whitespace-nowrap">تليفون المنزل :</label>
